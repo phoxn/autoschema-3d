@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { CAR, SYSTEMS, PARTS } from './parts.js?v=3';
-import { OPERATIONS } from './ops.js?v=3';
+import { CAR, SYSTEMS, PARTS } from './parts.js?v=4';
+import { OPERATIONS } from './ops.js?v=4';
 
 const V3 = (a) => new THREE.Vector3(...(a || [0, 0, 0]));
 const clock = new THREE.Clock();
@@ -18,14 +18,7 @@ export function fmtTool(t) {
   const s = String(t).replace(/(ключом|ключи|ключ|головкой|головки|головка)\s+(\d+)((?:\s*(?:и|или|,)\s*\d+)*)/gi, (m, a, b, c) => `${a} на ${b}${c} мм`);
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
-function toolIcon(t) {
-  const s = String(t).toLowerCase();
-  if (/отв[её]рт/.test(s)) return '🪛';
-  if (/рук|нажать|отжать|повернуть|отвести/.test(s)) return '✋';
-  if (/съ[её]мник|струбцин|пассат|лопатк|молот|домкрат|ёмкост|емкост|ворон|перчат/.test(s)) return '🛠️';
-  return '🔧';
-}
-const toolChip = (t, cls = '') => `<span class="tool ${cls}"><i>${toolIcon(t)}</i>${esc(fmtTool(t))}</span>`;
+const toolChip = (t, cls = '') => `<span class="tool ${cls}">${esc(fmtTool(t))}</span>`;
 
 // ─────────────── Сцена ───────────────
 const viewport = $('#viewport');
@@ -316,7 +309,7 @@ function setHighlights(map, labelTargets) {
       p.lbl = { el, w: 0, h: 0, x: null, y: null, shown: false };
     }
     p.lbl.el.className = `label ${h.kind}`;
-    p.lbl.el.innerHTML = `<b>${esc(p.def.name)}</b>${tool ? `<span>${toolIcon(tool)} ${esc(fmtTool(tool))}</span>` : ''}`;
+    p.lbl.el.innerHTML = `<b>${esc(p.def.name)}</b>${tool ? `<span>${esc(fmtTool(tool))}</span>` : ''}`;
     p.lbl.kind = h.kind;
     p.lbl.dirty = true;
     p.showLabel = true;
@@ -532,7 +525,7 @@ function updateHover() {
   if (!p) { tip.hidden = true; return; }
   const d = p.def;
   const r = viewport.getBoundingClientRect();
-  tip.innerHTML = `<span class="tip-sys">${esc(d.sys || '')}</span><b>${esc(d.name)}</b>${d.desc ? `<p>${esc(d.desc)}</p>` : ''}<em>Нажмите — подробнее</em>`;
+  tip.innerHTML = `<span class="tip-sys">${esc(d.sys || '')}</span><b>${esc(d.name)}</b>${d.desc ? `<p>${esc(d.desc)}</p>` : ''}<em>клик — подробнее</em>`;
   tip.hidden = false;
   const x = Math.min(e.clientX - r.left + 16, r.width - tip.offsetWidth - 8);
   const y = Math.min(e.clientY - r.top + 16, r.height - tip.offsetHeight - 8);
@@ -546,7 +539,6 @@ function pick(id) {
 }
 
 // ─────────────── Интерфейс ───────────────
-const GROUP_ICON = { 'ТО': '🛢️', 'Двигатель': '⚙️', 'Охлаждение': '🌡️', 'Тормоза': '🛑', 'Подвеска': '🔩' };
 const DIFF = { 'легко': 'easy', 'средне': 'mid', 'сложно': 'hard' };
 let tab = 'ops';
 let search = '';
@@ -557,12 +549,12 @@ function stepTools(s) {
 
 function renderOps() {
   const groups = [...new Set(OPERATIONS.map((o) => o.group))];
-  return groups.map((g) => `
-    <div class="group-title"><span>${GROUP_ICON[g] || '•'}</span>${esc(g)}</div>
+  return groups.map((g, gi) => `
+    <div class="group-title"><span class="n">${String(gi + 1).padStart(2, '0')}</span>${esc(g)}</div>
     ${OPERATIONS.filter((o) => o.group === g).map((o) => `
-      <button class="op" data-op="${o.id}">
+      <button class="op ${DIFF[o.difficulty] || ''}" data-op="${o.id}">
         <span class="op-name">${esc(o.name)}</span>
-        <span class="op-meta"><i class="dot ${DIFF[o.difficulty] || ''}"></i>${esc(o.difficulty)} · ${esc(o.time)} · ${o.steps.length} шагов</span>
+        <span class="op-meta">${esc(o.difficulty)} · ${esc(o.time)} · ${o.steps.length} шагов</span>
         <span class="op-go">›</span>
       </button>`).join('')}`).join('');
 }
@@ -591,22 +583,22 @@ function renderCatalog() {
 function renderStepPanel() {
   const op = curOp, s = op.steps[curStep];
   return `
-    <button id="b-exit" class="back">‹ Все операции</button>
-    <div class="op-head">
+    <div class="car-line"><span><b>${esc(CAR.make)} ${esc(CAR.model)}</b> ${esc(CAR.generation)} · ${esc(CAR.engine)}</span><button id="b-exit" class="back">‹ Все операции</button></div>
+    <div>
       <div class="op-title-big">${esc(op.name)}</div>
-      <div class="op-meta"><i class="dot ${DIFF[op.difficulty] || ''}"></i>${esc(op.difficulty)} · ${esc(op.time)}</div>
+      <div class="op-meta-line">${esc(op.difficulty)} · ${esc(op.time)} · ${op.steps.length} шагов</div>
     </div>
     <div class="need">
-      <div class="need-title">Что понадобится для всей работы</div>
+      <div class="cap">Инструмент на всю работу</div>
       <div class="tools-list">${op.tools.map((t) => toolChip(t, 'soft')).join('')}</div>
     </div>
     <div class="step-card">
-      <div class="step-num">Шаг ${curStep + 1} из ${op.steps.length}</div>
+      <div class="cap" style="color:var(--accent)">Шаг ${String(curStep + 1).padStart(2, '0')} / ${String(op.steps.length).padStart(2, '0')}</div>
       <h3>${esc(s.title)}</h3>
       <p>${esc(s.text)}</p>
       ${s.note ? `<div class="note">⚠️ ${esc(s.note)}</div>` : ''}
     </div>
-    <ol class="steps">${op.steps.map((x, i) => `<li data-i="${i}" class="${i === curStep ? 'cur' : i < curStep ? 'done' : ''}"><span>${i + 1}</span>${esc(x.title)}</li>`).join('')}</ol>
+    <ol class="steps">${op.steps.map((x, i) => `<li data-i="${i}" class="${i === curStep ? 'cur' : i < curStep ? 'done' : ''}"><span>${String(i + 1).padStart(2, '0')}</span>${esc(x.title)}</li>`).join('')}</ol>
     <div class="meta">
       ${op.note ? `<div class="status">${esc(op.note)}</div>` : ''}
       <div class="status">Механиком не проверено. Моменты затяжки сверяйте с заводским мануалом.</div>
@@ -621,8 +613,8 @@ function renderStepbar() {
   const tools = stepTools(s);
   bar.hidden = false;
   bar.innerHTML = `
-    <div class="sb-top"><span class="sb-num">${curStep + 1}/${op.steps.length}</span><span class="sb-title">${esc(s.title)}</span></div>
-    <div class="sb-tools">${tools.length ? `<span class="sb-label">Чем:</span>${tools.map((t) => toolChip(t)).join('')}` : s.restoreAll ? '<span class="sb-label">Сборка в обратном порядке</span>' : '<span class="sb-label muted">Инструмент на этом шаге не нужен</span>'}</div>
+    <div class="sb-top"><span class="sb-num">ШАГ ${String(curStep + 1).padStart(2, '0')}/${String(op.steps.length).padStart(2, '0')}</span><span class="sb-title">${esc(s.title)}</span></div>
+    <div class="sb-tools">${tools.length ? `<span class="sb-label">Инструмент</span>${tools.map((t) => toolChip(t)).join('')}` : s.restoreAll ? '<span class="sb-label">Сборка в обратном порядке</span>' : '<span class="sb-label muted">Инструмент на этом шаге не нужен</span>'}</div>
     <div class="sb-progress">${op.steps.map((_, i) => `<i class="${i < curStep ? 'done' : i === curStep ? 'cur' : ''}"></i>`).join('')}</div>`;
   nav.hidden = false;
   nav.innerHTML = `
@@ -638,6 +630,7 @@ function renderStepbar() {
 
 function renderPanel() {
   const el = $('#content');
+  $('#car-select').hidden = !!curOp;
   if (curOp) {
     el.innerHTML = renderStepPanel();
     $('#b-exit').onclick = exitOp;
@@ -676,7 +669,7 @@ function renderPicked() {
     <div class="picked-sys">${esc(d.sys || '')}</div>
     <div class="picked-title">${esc(d.name)}</div>
     ${d.desc ? `<p>${esc(d.desc)}</p>` : ''}
-    ${d.where ? `<p class="muted">📍 ${esc(d.where)}</p>` : ''}
+    ${d.where ? `<p class="muted">Где: ${esc(d.where)}</p>` : ''}
     ${d.tool ? `<div class="tools-list">${toolChip(d.tool)}</div>` : ''}
     ${d.faults?.length ? `<div class="faults"><b>Признаки неисправности</b><ul>${d.faults.map((f) => `<li>${esc(f)}</li>`).join('')}</ul></div>` : ''}
     ${ops.length && (!curOp || !ops.includes(curOp)) ? `<div class="picked-ops">${ops.map((o) => `<button class="primary" data-op="${o.id}">Как заменить: ${esc(o.name)}</button>`).join('')}</div>` : ''}
@@ -703,7 +696,6 @@ document.addEventListener('touchmove', (e) => { if (e.touches.length > 1 && !vie
 let lastTouchEnd = 0;
 document.addEventListener('touchend', (e) => { const t = Date.now(); if (t - lastTouchEnd < 300 && !e.target.closest('button, input, a')) e.preventDefault(); lastTouchEnd = t; }, { passive: false });
 
-$('#car-title').textContent = `${CAR.make} ${CAR.model} ${CAR.generation} · ${CAR.engine}`;
 $('#b-focus').onclick = () => { if (curOp) frameIds(stepFocus(curOp.steps[curStep]), curOp.steps[curStep].dir || curOp.dir); else flyToPose(OVERVIEW.pos, OVERVIEW.target); };
 $('#b-home').onclick = () => flyToPose(OVERVIEW.pos, OVERVIEW.target);
 $('#b-body').onclick = (e) => { body.visible = !body.visible; e.currentTarget.classList.toggle('off', !body.visible); };

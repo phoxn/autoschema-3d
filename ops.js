@@ -1,7 +1,7 @@
 // Операции (инструкции замены) для Hyundai Solaris I 1.6 G4FC.
 // Порядок работ пересказан по руководству на carpedia.club (ссылки в sources) и проверочным записям drive2.
 // Камера на каждом шаге наводится автоматически на детали шага; dir — с какой стороны смотреть.
-import { nutIds } from './parts.js?v=3';
+import { nutIds } from './parts.js?v=4';
 
 const rm = (id, x = {}) => ({ id, mode: 'remove', ...x });
 const ls = (id, x = {}) => ({ id, mode: 'loosen', ...x });
